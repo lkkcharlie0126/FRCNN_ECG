@@ -35,6 +35,21 @@ classdef TrainFRCNN
         info
         detector
         path_save_var
+        
+        detectionResults_train
+        detectionResults_test
+        ap_train
+        recall_train
+        precision_train
+        ap_test
+        recall_test
+        precision_test
+        recall
+        precision
+        tp
+        re
+        pre
+
     end
     methods
         function obj = TrainFRCNN()
@@ -184,26 +199,26 @@ classdef TrainFRCNN
                                 'NumRegionsToSample', [16, 16]);
         end
 
-        function evaluation(obj)
+        function obj = evaluation(obj)
             %Training
-            detectionResults_train = detect(obj.detector, obj.dataTrain_preprocess,...
+            obj.detectionResults_train = detect(obj.detector, obj.dataTrain_preprocess,...
                 'Threshold', 0, 'SelectStrongest', true, 'MiniBatchSize', 1);
-            [ap_train, recall_train, precision_train] = evaluateDetectionPrecision(...
-                                                detectionResults_train,...
+            [obj.ap_train, obj.recall_train, obj.precision_train] = evaluateDetectionPrecision(...
+                                                obj.detectionResults_train,...
                                                 obj.dataTrain_preprocess,...
                                                 0.5);
             % Testing
-            detectionResults_test = detect(obj.detector, obj.dataTest_preprocess,...
+            obj.detectionResults_test = detect(obj.detector, obj.dataTest_preprocess,...
                 'Threshold', 0, 'SelectStrongest', true, 'MiniBatchSize', 1);
     %         detectionResults_test = detect_fasterrcnn(detector, dataTest);
-            [ap_test, recall_test, precision_test] = evaluateDetectionPrecision(...
-                                                detectionResults_test,...
+            [obj.ap_test, obj.recall_test, obj.precision_test] = evaluateDetectionPrecision(...
+                                                obj.detectionResults_test,...
                                                 obj.dataTest_preprocess,...
                                                 0.5);
           
             % Recall / precision 
-            [recall, precision, tp, re, pre] = recall_precision_new(...
-                        detectionResults_test, obj.dataTest_preprocess,...
+            [obj.recall, obj.precision, obj.tp, obj.re, obj.pre] = recall_precision_new(...
+                        obj.detectionResults_test, obj.dataTest_preprocess,...
                         obj.inputImageSize, obj.inputImageSize);
 
             % Plot recall-precision curve
@@ -220,12 +235,28 @@ classdef TrainFRCNN
     %         ylabel('Precision')
     %         grid on
     %         title(sprintf('Average Precision = %.2f', ap_val(1)))
-            detector = obj.detector;
-            info = obj.info;
-            save([obj.path_save_var, obj.slash, 'result.mat'],...
-                'detector', 'info', 'detectionResults_train','detectionResults_test',...
-                'ap_train', 'ap_test', 'recall_train', 'recall_test', 'precision_train', 'precision_test',...
-                'recall', 'precision', 'tp', 'pre', 're');
+        end
+        function saveResult(obj)
+%             detector = obj.detector;
+%             info = obj.info;
+%             ap_train = obj.ap_train;
+%             recall_train = obj.recall_train;
+%             precision_train = obj.precision_train;
+%             ap_test = obj.ap_test;
+%             recall_test = obj.recall_test;
+%             precision_test = obj.precision_test;
+%             recall = recall;
+%             precision = obj.precision;
+%             tp = obj.tp;
+%             re = obj.re;
+%             pre = obj.pre;
+%             detectionResults_train = obj.detectionResults_train;
+%             detectionResults_test = obj.detectionResults_test;
+            save([obj.path_save_var, obj.slash, 'result.mat'], 'obj');
+%             save([obj.path_save_var, obj.slash, 'result.mat'],...
+%                 'detector', 'info', 'detectionResults_train','detectionResults_test',...
+%                 'ap_train', 'ap_test', 'recall_train', 'recall_test', 'precision_train', 'precision_test',...
+%                 'recall', 'precision', 'tp', 'pre', 're');
         end
     end
 end
