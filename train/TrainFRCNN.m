@@ -14,10 +14,10 @@ classdef TrainFRCNN
         learningrate = 1e-4;
         minibatchsize = [2];
         epoch = 20;
-        network = ["alexnet"];
         inputImageSize = [227 681 3];
         anchorNum = 3;
         foldNum = 5;
+        foldRun = [1:5];
 
         T_used
         numClasses
@@ -32,9 +32,9 @@ classdef TrainFRCNN
 
         lgraph
         options
+        path_save_var
         info
         detector
-        path_save_var
         
         detectionResults_train
         detectionResults_test
@@ -44,11 +44,13 @@ classdef TrainFRCNN
         ap_test
         recall_test
         precision_test
-        recall
+        recall                              
         precision
         tp
         re
         pre
+
+        lgraphBuilder = AlexNetBuilder;
 
     end
     methods
@@ -61,7 +63,6 @@ classdef TrainFRCNN
             obj = obj.loadData();
             obj = obj.kfold();
             obj = obj.iterateEachFold();
-            
         end
 
         function obj = setup(obj)
@@ -86,6 +87,7 @@ classdef TrainFRCNN
             obj.T_used = T_all;
             % Remove bbox with 0 height
             obj.T_used = remove0heightbbox(obj.T_used);
+%             obj.T_used = removeEmptybbox(obj.T_used);
             obj.numClasses = size(obj.T_used,2)-1;
             obj.windows_num = size(obj.T_used,1);
         end
@@ -99,7 +101,7 @@ classdef TrainFRCNN
 
         function obj = iterateEachFold(obj)
             iteratorFold = Iterator;
-            iteratorFold.list = [1 : obj.foldNum];
+            iteratorFold.list = obj.foldRun;
             iteratorFold = iteratorFold.first();
             while(~iteratorFold.isDone())
                 obj.thisFold = iteratorFold.currentItem();
@@ -108,10 +110,11 @@ classdef TrainFRCNN
                 obj = obj.dataArrangement();
                 obj.displayExample();
                 obj = obj.buildLgraph;
-                obj = obj.applyClassWeights();
+%                 obj = obj.applyClassWeights();
                 obj = obj.trainingOptions()
                 obj = obj.train();
-                obj.evaluation();
+                obj = obj.evaluation();
+                obj.saveResult();
 
                 iteratorFold = iteratorFold.next();
             end
@@ -149,32 +152,19 @@ classdef TrainFRCNN
         end
 
         function obj = buildLgraph(obj)
-            disp(['=============================', obj.network{1}, '==============================']);
-            switch obj.network{1}
-                case 'alexnet'
-                    featureLayer = 'relu5';
-                case 'googlenet'
-                    featureLayer = 'inception_4d-output';
-                case 'resnet50'
-                    featureLayer = 'activation_40_relu';
-            end
-            % Estimate anchor box size
-            [anchorBoxes, ~] = estimateAnchorBoxes(obj.dataTrain_preprocess, obj.anchorNum);
-            % Build Lgraph
-            obj.lgraph = fasterRCNNLayers(obj.inputImageSize,obj.numClasses,anchorBoxes, ...
-                                      obj.network{1},featureLayer);
-%             analyzeNetwork(lgraph)
+            obj.lgraphBuilder = obj.lgraphBuilder.build(obj.dataTrain_preprocess, obj.anchorNum, obj.inputImageSize, obj.numClasses);
+            obj.lgraph = obj.lgraphBuilder.lgraph;
         end
 
         function obj = applyClassWeights(obj)
             classes = ["SR", "APC", "VPC", "LBBB", "RBBB", "Others", "background"];
             classWeights = [0.05, 0.2, 0.15, 0.15, 0.15, 0.15, 0.15];
-            obj.lgraph = applyClassWeights(obj.lgraph, classes, classWeights, obj.network(1));
+            obj.lgraph = applyClassWeights(obj.lgraph, classes, classWeights, obj.lgraphBuilder.networkBasic);
         end
 
         function obj = trainingOptions(obj)
             obj.path_save_var = [obj.path_result, obj.slash,...
-                obj.network{1},'_', obj.set_box_width{1}, obj.slash,...
+                obj.lgraphBuilder.network, '_', obj.set_box_width{1}, obj.slash,...
                 'fold', int2str(obj.thisFold)];
             mkdir(obj.path_save_var)
             mkdir([obj.path_save_var, obj.slash, 'checkpoint'])
@@ -183,7 +173,7 @@ classdef TrainFRCNN
             'MiniBatchSize', obj.minibatchsize(1), ...
             'InitialLearnRate', obj.learningrate, ...
             'MaxEpochs', obj.epoch, ...
-            'VerboseFrequency',  round((obj.dataNum_Train/ obj.minibatchsize(1))/10))%, ...
+            'VerboseFrequency',  round((obj.dataNum_Train/ obj.minibatchsize(1))/10));%, ...
 %             'CheckpointPath', [path_save_var, '\', 'checkpoint'])%,...
 %                     'ValidationData',dataVal_preprocess,...
 %                     'ValidationFrequency', round(dataNum_Test),...
@@ -195,18 +185,18 @@ classdef TrainFRCNN
                 obj.dataTrain_preprocess, obj.lgraph, obj.options,...
                                 'NegativeOverlapRange',[0 0.6], ...
                                 'PositiveOverlapRange',[0.8 1],...
-                                'NumStrongestRegions', 2000,...
+                                'NumStrongestRegions', 200,...
                                 'NumRegionsToSample', [16, 16]);
         end
 
         function obj = evaluation(obj)
             %Training
-            obj.detectionResults_train = detect(obj.detector, obj.dataTrain_preprocess,...
-                'Threshold', 0, 'SelectStrongest', true, 'MiniBatchSize', 1);
-            [obj.ap_train, obj.recall_train, obj.precision_train] = evaluateDetectionPrecision(...
-                                                obj.detectionResults_train,...
-                                                obj.dataTrain_preprocess,...
-                                                0.5);
+%             obj.detectionResults_train = detect(obj.detector, obj.dataTrain_preprocess,...
+%                 'Threshold', 0, 'SelectStrongest', true, 'MiniBatchSize', 1);
+%             [obj.ap_train, obj.recall_train, obj.precision_train] = evaluateDetectionPrecision(...
+%                                                 obj.detectionResults_train,...
+%                                                 obj.dataTrain_preprocess,...
+%                                                 0.5);
             % Testing
             obj.detectionResults_test = detect(obj.detector, obj.dataTest_preprocess,...
                 'Threshold', 0, 'SelectStrongest', true, 'MiniBatchSize', 1);
@@ -236,27 +226,9 @@ classdef TrainFRCNN
     %         grid on
     %         title(sprintf('Average Precision = %.2f', ap_val(1)))
         end
+        
         function saveResult(obj)
-%             detector = obj.detector;
-%             info = obj.info;
-%             ap_train = obj.ap_train;
-%             recall_train = obj.recall_train;
-%             precision_train = obj.precision_train;
-%             ap_test = obj.ap_test;
-%             recall_test = obj.recall_test;
-%             precision_test = obj.precision_test;
-%             recall = recall;
-%             precision = obj.precision;
-%             tp = obj.tp;
-%             re = obj.re;
-%             pre = obj.pre;
-%             detectionResults_train = obj.detectionResults_train;
-%             detectionResults_test = obj.detectionResults_test;
             save([obj.path_save_var, obj.slash, 'result.mat'], 'obj');
-%             save([obj.path_save_var, obj.slash, 'result.mat'],...
-%                 'detector', 'info', 'detectionResults_train','detectionResults_test',...
-%                 'ap_train', 'ap_test', 'recall_train', 'recall_test', 'precision_train', 'precision_test',...
-%                 'recall', 'precision', 'tp', 'pre', 're');
         end
     end
 end

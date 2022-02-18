@@ -1,4 +1,4 @@
-%% Last editted: 2022. 02. 18
+%% Last editted: 2022.01.20
 %% by Wen Tzu Chien
 %%
 clear all
@@ -6,15 +6,13 @@ close all;
 addpath(genpath('dataCutter'))
 addpath(genpath('iterator'))
 addpath(genpath('train'))
-addpath(genpath('net'))
 
 frcnnTrainner = TrainFRCNN;
 
+frcnnTrainner.minibatchsize = [4];
 frcnnTrainner.set_timeWindow = '10sec_square';
-frcnnTrainner.lgraphBuilder = Resnet18Builder;
 frcnnTrainner.epoch = 1;
-frcnnTrainner.minibatchsize = [2];
 frcnnTrainner.inputImageSize = [227 227 3];
-frcnnTrainner.foldNum = 5;
-frcnnTrainner.anchorNum = 2;
+frcnnTrainner.anchorNum = 4;
+frcnnTrainner.network = ["resnetSelf2"];
 frcnnTrainner.run();

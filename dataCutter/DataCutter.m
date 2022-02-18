@@ -7,8 +7,8 @@ classdef DataCutter
         folder_parent = fileparts(fileparts(cd));
         folder_AAMI
         folder_save
-        folder_saveName = 'test'
-        slash = '/'
+        folder_saveName = 'test';
+        slash = '/';
         %% Parameter setting
         time_window = 10;
         step_window = 10;
@@ -33,7 +33,7 @@ classdef DataCutter
         % Resize
         isResize = 1;
         % Img size
-        wanted_img_size = [227, 681, 3]
+        wanted_img_size = [227, 681, 3];
         
         type_name = [''];
         num_class
@@ -64,6 +64,16 @@ classdef DataCutter
         win_sample
 
         beatNum
+
+        filt_10s
+        each_window_name
+        signal_10s
+        save_sig_axis
+        save_sig
+        savePathMat
+        idxWindow
+
+
     end
     methods
         function obj = DataCutter()
@@ -117,7 +127,7 @@ classdef DataCutter
             obj.subjectName = ['s', subject(1:end-5)]; 
             mkdir([obj.folder_save, obj.slash, 'mat', obj.slash, obj.subjectName]);
 %             mkdir([obj.folder_save, '\signal_axis\',  obj.subjectName]);
-%             mkdir([obj.folder_save, '\signal\',  obj.subjectName]);
+            mkdir([obj.folder_save, '\signal\',  obj.subjectName]);
             mkdir([obj.folder_save, obj.slash, 'signal_resize', obj.slash, obj.subjectName]);
 %             mkdir([obj.folder_save, '\cwt_axis\',  obj.subjectName]);
 %             mkdir([obj.folder_save, '\cwt\',  obj.subjectName]);
@@ -169,26 +179,26 @@ classdef DataCutter
             iteratorWindow.list = obj.index_10s;
             iteratorWindow = iteratorWindow.first();
             while(~iteratorWindow.isDone())
-                idxWindow = iteratorWindow.currentIndex();
-                each_window_name = [obj.subjectName, '_', int2str(idxWindow)];
+                obj.idxWindow = iteratorWindow.currentIndex();
+                obj.each_window_name = [obj.subjectName, '_', int2str(obj.idxWindow)];
                 obj.win_start = iteratorWindow.currentItem();
                 obj.win_end = (obj.win_start + obj.time_window * obj.Fs - 1);
-                signal_10s = obj.raw_data(obj.win_start : obj.win_end);
-                filt_10s = obj.preProcessing(signal_10s);
+                obj.signal_10s = obj.raw_data(obj.win_start : obj.win_end);
+                obj = obj.preProcessing();
                 obj = obj.initLabel();
-                obj = obj.iterateEachBeat(filt_10s, each_window_name); 
+                obj = obj.iterateEachBeat(); 
                 
-                obj = obj.saveData(idxWindow, each_window_name, filt_10s, signal_10s);
+                obj = obj.saveData();
                 iteratorWindow = iteratorWindow.next();
             end
 
         end
 
-        function filt_10s = preProcessing(obj, signal_10s)
+        function obj = preProcessing(obj)
             % Filter
-            filt_10s = fir_filter(signal_10s, obj.Fs);
+            obj.filt_10s = fir_filter(obj.signal_10s, obj.Fs);
             % Normalize
-            filt_10s = normalize_min_max(filt_10s);
+            obj.filt_10s = normalize_min_max(obj.filt_10s);
         end
         function obj = initLabel(obj)
             %% Label
@@ -207,33 +217,33 @@ classdef DataCutter
             obj.win_sample = obj.sample(select_label) - obj.win_start;
         end
 
-        function obj = iterateEachBeat(obj, filt_10s, each_window_name)
+        function obj = iterateEachBeat(obj)
             iteratorBeat = Iterator;
             iteratorBeat.list = obj.win_label;
             iteratorBeat = iteratorBeat.first();
             obj.beatNum = 1;
             while(~iteratorBeat.isDone())
                 beat = iteratorBeat.currentIndex;
-                obj = obj.labelBbox(beat, filt_10s, each_window_name);
+                obj = obj.labelBbox(beat);
 
                 iteratorBeat = iteratorBeat.next();
             end
         end
 
-        function obj = labelBbox(obj, beat, filt_10s, each_window_name)
+        function obj = labelBbox(obj, beat)
             if ~((obj.win_label(beat) == '+') || ((obj.win_sample(beat) - obj.beat_left) < 1) || ((obj.win_sample(beat) + obj.beat_right) > obj.Fs*obj.time_window))
 %                 box_left = max((win_sample(beat) - beat_left), 1);
 %                 box_right = min((win_sample(beat) + beat_right), 3600);
                 box_left = obj.win_sample(beat) - obj.beat_left;
                 box_right = obj.win_sample(beat) + obj.beat_right;
-                box_min = max(min(filt_10s(box_left:box_right)) - obj.addtop, 0);
-                box_max = min(max(filt_10s(box_left:box_right)) + obj.addtop, 1);  
+                box_min = max(min(obj.filt_10s(box_left:box_right)) - obj.addtop, 0);
+                box_max = min(max(obj.filt_10s(box_left:box_right)) + obj.addtop, 1);  
                 box_width = box_right-box_left;
                 box_height = box_max-box_min;
                 box_pos = [box_left, box_min, box_width, box_height]; % [x, y, width, height]
                 
                 %% Plot each beat
-                sig = filt_10s(box_left:box_right);
+                sig = obj.filt_10s(box_left:box_right);
                 sig =  (sig-min(sig))/max(sig-min(sig));
 
 %                 f_singlebeat = figure('visible','off');
@@ -292,36 +302,61 @@ classdef DataCutter
             end
         end
 
-        function obj = saveData(obj, idxWindow, each_window_name, filt_10s, signal_10s)
-            % Save .txt for python
-%             if obj.two_class == 1
-%                 writematrix(obj.py_single,[obj.folder_save, '\box\new\python\label_all\single\', each_window_name, '.txt'],'Delimiter',' ')
-%             else
-%                 writematrix(obj.py_multi,[obj.folder_save, '\box\new\python\label_all\multi\', each_window_name, '.txt'],'Delimiter',' ')  
-%             end
+        function obj = saveData(obj)
+            obj = obj.saveSetting();
+            obj.saveMat();
+%             obj.savePythonTxT();
+            obj.saveSignal();
+%             obj.saveCWT();
+        end
+        
+        function obj = saveSetting(obj)
+            obj.savePathMat = [obj.folder_save, obj.slash, 'mat',...
+                obj.slash, obj.subjectName, obj.slash, obj.each_window_name, '.mat'];
+            obj.save_sig_axis = [obj.folder_save, obj.slash, 'signal_axis',...
+                obj.slash, obj.subjectName, obj.slash, obj.each_window_name, '.png'];
 
-            % Save signal
-            save([obj.folder_save, obj.slash, 'mat', obj.slash, obj.subjectName, obj.slash, each_window_name, '.mat'], 'signal_10s');
-            
-            save_sig_axis = [obj.folder_save, obj.slash, 'signal_axis', obj.slash, obj.subjectName, obj.slash, each_window_name, '.png'];
             if obj.istwcc == 1
-                save_sig = ['/home/tzuchienw1n/Tzu_Chien/PAG/FasterRCNN_MITBIH/data/signal_resize_20sec', '/',obj.subjectName, '/', each_window_name, '.png']; 
+                obj.save_sig = ['/home/tzuchienw1n/Tzu_Chien/PAG/FasterRCNN_MITBIH/data/', obj.folder_saveName, '/signal_resize/',obj.subjectName, '/', obj.each_window_name, '.png']; 
             else
-                save_sig = [obj.folder_save, obj.slash, 'signal_resize', obj.slash, obj.subjectName, obj.slash, each_window_name, '.png'];
+                obj.save_sig = [obj.folder_save, obj.slash, 'signal_resize', obj.slash, obj.subjectName, obj.slash, obj.each_window_name, '.png'];
             end
-%             save_signal(filt_10s, obj.Fs, save_sig_axis, save_sig, each_window_name, obj.isResize);
-    
-            % CWT
-%             save_cwt_axis = [obj.folder_save, '\cwt_axis', '\',obj.subjectName, '\', each_window_name, '.png'];
-%             save_cwt_only = [obj.folder_save, '\cwt',  '\',obj.subjectName, '\', each_window_name, '.png'];
-%             save_cwt(filt_10s, obj.Fs, obj.fmin, obj.fmax, obj.fstep, save_cwt_axis, save_cwt_only, each_window_name);    
-            
+                        
             % Box
             if obj.two_class
-                obj.bboxTable{idxWindow,1:2} = [{save_sig}, {obj.win_Peak}];
+                obj.bboxTable{obj.idxWindow,1:2} = [{obj.save_sig}, {obj.win_Peak}];
             else
-                obj.bboxTable{idxWindow,1:7} = [{save_sig}, {obj.win_SR}, {obj.win_APC}, {obj.win_VPC}, {obj.win_LBBB}, {obj.win_RBBB}, {obj.win_Others}];
+                obj.bboxTable{obj.idxWindow,1:7} = [{obj.save_sig}, {obj.win_SR}, {obj.win_APC}, {obj.win_VPC}, {obj.win_LBBB}, {obj.win_RBBB}, {obj.win_Others}];
             end
+        end
+
+        function saveMat(obj)
+            % Save signal
+            signal_10s = obj.signal_10s;
+            save(obj.savePathMat, 'signal_10s');
+        end
+        
+        function savePythonTxT(obj)
+                % Save .txt for python
+            if obj.two_class == 1
+                writematrix(obj.py_single,[obj.folder_save, '\box\new\python\label_all\single\',...
+                    obj.each_window_name, '.txt'],'Delimiter',' ')
+            else
+                writematrix(obj.py_multi,[obj.folder_save, '\box\new\python\label_all\multi\',...
+                    obj.each_window_name, '.txt'],'Delimiter',' ')  
+            end
+        end
+
+        function saveSignal(obj)
+            save_signal(obj.filt_10s, obj.Fs, obj.save_sig_axis, obj.save_sig, obj.each_window_name, obj.isResize);
+        end
+
+        function saveCWT(obj)
+            % CWT
+            save_cwt_axis = [obj.folder_save, '\cwt_axis', '\',obj.subjectName, '\', obj.each_window_name, '.png'];
+            save_cwt_only = [obj.folder_save, '\cwt',  '\',obj.subjectName, '\', obj.each_window_name, '.png'];
+            save_cwt(obj.filt_10s, obj.Fs, obj.fmin, obj.fmax, obj.fstep, save_cwt_axis, save_cwt_only, obj.each_window_name);    
+
         end
 
         function saveBboxTable(obj)
