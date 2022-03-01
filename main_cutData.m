@@ -11,11 +11,11 @@ addpath(genpath('train'))
 dataCutter = DataCutter_BboxOnly;
 dataCutter.slash = '/';
 dataCutter.isResize = 1;
-dataCutter.folder_saveName = '30sec';
+dataCutter.folder_saveName = '5sec';
 % dataCutter.wanted_img_size = [227, 227, 3];
-dataCutter.istwcc = 1;
-dataCutter.time_window = 30;
-dataCutter.step_window = 30;
+dataCutter.istwcc = 0;
+dataCutter.time_window = 5;
+dataCutter.step_window = 5;
 
 
 

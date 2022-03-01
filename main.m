@@ -8,10 +8,11 @@ addpath(genpath('iterator'))
 addpath(genpath('train'))
 addpath(genpath('net'))
 
+
 frcnnTrainner = TrainFRCNN;
 
 frcnnTrainner.set_timeWindow = '10sec_square';
-frcnnTrainner.lgraphBuilder = Resnet18Builder;
+frcnnTrainner.lgraphBuilder = ResnetSelf2Builder;
 frcnnTrainner.epoch = 1;
 frcnnTrainner.minibatchsize = [2];
 frcnnTrainner.inputImageSize = [227 227 3];

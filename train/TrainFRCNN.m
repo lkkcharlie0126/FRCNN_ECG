@@ -49,6 +49,8 @@ classdef TrainFRCNN
         tp
         re
         pre
+        
+        notes = ''
 
         lgraphBuilder = AlexNetBuilder;
 
@@ -63,7 +65,7 @@ classdef TrainFRCNN
             obj = obj.loadData();
             obj = obj.kfold();
             obj = obj.iterateEachFold();
-        end
+        end   
 
         function obj = setup(obj)
             obj.path_folder = [obj.folder_parent, obj.slash, 'data', obj.slash,...
@@ -110,7 +112,7 @@ classdef TrainFRCNN
                 obj = obj.dataArrangement();
                 obj.displayExample();
                 obj = obj.buildLgraph;
-%                 obj = obj.applyClassWeights();
+                obj = obj.classWeights();
                 obj = obj.trainingOptions()
                 obj = obj.train();
                 obj = obj.evaluation();
@@ -156,15 +158,15 @@ classdef TrainFRCNN
             obj.lgraph = obj.lgraphBuilder.lgraph;
         end
 
-        function obj = applyClassWeights(obj)
+        function obj = classWeights(obj)
             classes = ["SR", "APC", "VPC", "LBBB", "RBBB", "Others", "background"];
-            classWeights = [0.05, 0.2, 0.15, 0.15, 0.15, 0.15, 0.15];
+            classWeights = [0.01, 0.44, 0.15, 0.14, 0.15, 0.1, 0.01];
             obj.lgraph = applyClassWeights(obj.lgraph, classes, classWeights, obj.lgraphBuilder.networkBasic);
         end
 
         function obj = trainingOptions(obj)
             obj.path_save_var = [obj.path_result, obj.slash,...
-                obj.lgraphBuilder.network, '_', obj.set_box_width{1}, obj.slash,...
+                obj.lgraphBuilder.network, '_', obj.set_box_width{1}, obj.notes, obj.slash,...
                 'fold', int2str(obj.thisFold)];
             mkdir(obj.path_save_var)
             mkdir([obj.path_save_var, obj.slash, 'checkpoint'])

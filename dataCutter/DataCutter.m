@@ -106,17 +106,18 @@ classdef DataCutter
         end
         
         function iterateEachSubject(obj)
-            iteratorSubject = Iterator;
+            iteratorSubject = IteratorSubjects;
             iteratorSubject.list = obj.subject_list;
             iteratorSubject = iteratorSubject.first();
             while(~iteratorSubject.isDone())
                 subject = iteratorSubject.currentItem();
-                subject = subject{1};
+                disp(['Subject ', int2str(iteratorSubject.currentIndex()), '/', int2str(length(obj.subject_list))]);
+
                 obj = obj.createSaveFoldeer(subject);
                 obj = obj.loadData(subject);
                 obj.bboxTable = obj.InitBoxTable();
                 obj = obj.iterateEachWindow();
-
+                
                 obj.saveBboxTable();
                 iteratorSubject = iteratorSubject.next();
             end
