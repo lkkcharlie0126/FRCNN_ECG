@@ -73,6 +73,8 @@ classdef DataCutter
         savePathMat
         idxWindow
 
+        save_sig_axis_raw
+
 
     end
     methods
@@ -127,7 +129,8 @@ classdef DataCutter
             %% Create save folder
             obj.subjectName = ['s', subject(1:end-5)]; 
             mkdir([obj.folder_save, obj.slash, 'mat', obj.slash, obj.subjectName]);
-%             mkdir([obj.folder_save, '\signal_axis\',  obj.subjectName]);
+            mkdir([obj.folder_save, '\signal_axis\',  obj.subjectName]);
+            mkdir([obj.folder_save, '\signal_axis_raw\',  obj.subjectName]);
             mkdir([obj.folder_save, '\signal\',  obj.subjectName]);
             mkdir([obj.folder_save, obj.slash, 'signal_resize', obj.slash, obj.subjectName]);
 %             mkdir([obj.folder_save, '\cwt_axis\',  obj.subjectName]);
@@ -305,7 +308,7 @@ classdef DataCutter
 
         function obj = saveData(obj)
             obj = obj.saveSetting();
-            obj.saveMat();
+%             obj.saveMat();
 %             obj.savePythonTxT();
             obj.saveSignal();
 %             obj.saveCWT();
@@ -315,6 +318,8 @@ classdef DataCutter
             obj.savePathMat = [obj.folder_save, obj.slash, 'mat',...
                 obj.slash, obj.subjectName, obj.slash, obj.each_window_name, '.mat'];
             obj.save_sig_axis = [obj.folder_save, obj.slash, 'signal_axis',...
+                obj.slash, obj.subjectName, obj.slash, obj.each_window_name, '.png'];
+            obj.save_sig_axis_raw = [obj.folder_save, obj.slash, 'signal_axis_raw',...
                 obj.slash, obj.subjectName, obj.slash, obj.each_window_name, '.png'];
 
             if obj.istwcc == 1
@@ -349,7 +354,8 @@ classdef DataCutter
         end
 
         function saveSignal(obj)
-            save_signal(obj.filt_10s, obj.Fs, obj.save_sig_axis, obj.save_sig, obj.each_window_name, obj.isResize);
+%             save_signal(obj.filt_10s, obj.Fs, obj.save_sig_axis, obj.save_sig, obj.each_window_name, obj.isResize);
+            save_signal(obj.filt_10s, obj.signal_10s, obj.Fs, obj.save_sig_axis, obj.save_sig_axis_raw, obj.save_sig, obj.each_window_name, obj.isResize);
         end
 
         function saveCWT(obj)

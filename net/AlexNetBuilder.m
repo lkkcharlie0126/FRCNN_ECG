@@ -1,6 +1,6 @@
-classdef AlexNetBuilder < LgraphBuilder
+classdef AlexnetBuilder < LgraphBuilder
     methods
-        function obj = AlexNetBuilder()
+        function obj = AlexnetBuilder()
             obj.featureLayer = 'relu5';
             obj.network = 'alexnet';
             obj.networkBasic = 'alexnet';

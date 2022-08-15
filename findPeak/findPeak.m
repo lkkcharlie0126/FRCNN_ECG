@@ -2,7 +2,7 @@ slash = '\';
 subjectsPath = 'D:\Win\WTMH\PAG_group\mitbih_5class\data\10sec\mat';
 
 subjectsList = {dir(fullfile(subjectsPath)).name}';
-subjectsList = subjectList(3:end);
+subjectsList = subjectsList(3:end);
 
 for i = 1:length(subjectsList)
     matsPath = [subjectsPath, slash, subjectsList{i}];
@@ -18,11 +18,17 @@ for i = 1:length(subjectsList)
         min_peak = 0.7;
         t = (1:length(signal))/s_rate; % Time
 
+        [Ramp,Rpeak,w,p]  = findpeaks(signal);
+%         [Ramp,Rpeak,w,p]  = findpeaks(signal, 'MinPeakHeight', min_peak);
+        [Ramp,Rpeak,w,p]  = findpeaks(signal,'MinPeakDistance',interval_ecg);
         [Ramp,Rpeak,w,p]  = findpeaks(signal,'MinPeakDistance',interval_ecg, 'MinPeakHeight', min_peak);
-        
-        f1 = figure(1),
+
+        f1 = figure(1);
         plot(t, signal); hold on;
         plot(Rpeak/s_rate, Ramp, '*');
+        xlabel('Time (s)','Fontname', 'Times New Roman','FontSize',14,'FontWeight','bold')
+        ylabel('Amplitude (Normalized)','Fontname', 'Times New Roman','FontSize',14,'FontWeight','bold')  
+%         title(img_title,'Fontname', 'Times New Roman','FontSize',18,'FontWeight','bold');
         close(f1)
     end
 end

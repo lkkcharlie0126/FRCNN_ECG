@@ -38,6 +38,11 @@ for i = 1:size(result,1) % Each image
             flag_7 = 0;
             for k = 1:size(truth{i, 2}, 1) % Each ground truth
                 box_r = bboxresize(truth{i, 1}(k,:), scale);
+%                 try
+%                     bboxOverlapRatio(box_r, result{i,1}{1}(j,:));
+%                 catch
+%                     result{i,1}{1}(j,:)
+%                 end
                 if (bboxOverlapRatio(box_r, result{i,1}{1}(j,:)) >= iou_threshold) && repeat(k) == 0
                     if repeat(k) == 0
                         flag_7 = 1;
@@ -93,6 +98,6 @@ re(8) = re(7);
 
 % Result
 precision = tp ./ pre;
-recall = tp./re;
+recall = tp ./ re;
 end
 

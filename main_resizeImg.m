@@ -7,9 +7,9 @@ addpath(genpath('iterator'))
 addpath(genpath('imageResizer'))
 
 imageResizer = ImageResizer;
-imageResizer.folderOriginal = '20sec\signal_resize';
-imageResizer.folderNew = '20sec_square\signal_resize';
-imageResizer.wantedSize = [227, 227];
+imageResizer.folderOriginal = '5sec\signal_resize';
+imageResizer.folderNew = '5sec_120\signal_resize';
+imageResizer.wantedSize = [120, 120];
 
 imageResizer =imageResizer.setPath();
 imageResizer.iterateEachSubject()

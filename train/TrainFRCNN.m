@@ -52,12 +52,18 @@ classdef TrainFRCNN
         
         notes = ''
 
-        lgraphBuilder = AlexNetBuilder;
-
+        lgraphBuilder = AlexnetBuilder;
+        numStrongestRegions
+        numRegionsToSample = [16, 16];
+        negativeOverlapRange = [0, 0.6];
+        positiveOverlapRange = [0.8, 1];
+        eachClassBeatNum
+        isBalanced
     end
     methods
         function obj = TrainFRCNN()
             rng(1)
+            disp("FRCNN Trainer");
         end
 
         function obj = run(obj)
@@ -82,11 +88,18 @@ classdef TrainFRCNN
             for subject = 1:length(subject_list)
                 load([path_width, obj.slash, subject_list{subject}, obj.slash, 'T_',...
                     subject_list{subject}, '.mat']);
-                T_all = [T_all ; bboxTable];
+                try
+                    T_all = [T_all ; bboxTable];
+                catch
+                    T_all = [T_all ; T];
+                end
             end
             % Select data to use
-%             [T_used, eachClassBeatNum] = balanceData(T_all, 2355);
-            obj.T_used = T_all;
+            if obj.isBalanced
+                [obj.T_used, obj.eachClassBeatNum] = balanceData(T_all, 2355);
+            else
+                obj.T_used = T_all;
+            end
             % Remove bbox with 0 height
             obj.T_used = remove0heightbbox(obj.T_used);
 %             obj.T_used = removeEmptybbox(obj.T_used);
@@ -154,14 +167,17 @@ classdef TrainFRCNN
         end
 
         function obj = buildLgraph(obj)
-            obj.lgraphBuilder = obj.lgraphBuilder.build(obj.dataTrain_preprocess, obj.anchorNum, obj.inputImageSize, obj.numClasses);
+            obj.lgraphBuilder = obj.lgraphBuilder.build(...
+                obj.dataTrain_preprocess, obj.anchorNum,...
+                obj.inputImageSize, obj.numClasses);
             obj.lgraph = obj.lgraphBuilder.lgraph;
         end
 
         function obj = classWeights(obj)
             classes = ["SR", "APC", "VPC", "LBBB", "RBBB", "Others", "background"];
             classWeights = [0.01, 0.44, 0.15, 0.14, 0.15, 0.1, 0.01];
-            obj.lgraph = applyClassWeights(obj.lgraph, classes, classWeights, obj.lgraphBuilder.networkBasic);
+            obj.lgraph = applyClassWeights(obj.lgraph,...
+                classes, classWeights, obj.lgraphBuilder.networkBasic);
         end
 
         function obj = trainingOptions(obj)
@@ -175,20 +191,21 @@ classdef TrainFRCNN
             'MiniBatchSize', obj.minibatchsize(1), ...
             'InitialLearnRate', obj.learningrate, ...
             'MaxEpochs', obj.epoch, ...
-            'VerboseFrequency',  round((obj.dataNum_Train/ obj.minibatchsize(1))/10));%, ...
-%             'CheckpointPath', [path_save_var, '\', 'checkpoint'])%,...
-%                     'ValidationData',dataVal_preprocess,...
-%                     'ValidationFrequency', round(dataNum_Test),...
-%                     'ValidationPatience', Inf)
+            'VerboseFrequency',  round((obj.dataNum_Train/ obj.minibatchsize(1))/10), ...
+            'ValidationData', obj.dataTest_preprocess,...
+            'ValidationFrequency', round(obj.dataNum_Train/2),...
+            'ValidationPatience', Inf, ...
+             Plots = "training-progress");%, ...
+%                     'CheckpointPath', [obj.path_save_var, '\', 'checkpoint']);
         end
 
         function obj = train(obj)
             [obj.detector, obj.info] = trainFasterRCNNObjectDetector(...
                 obj.dataTrain_preprocess, obj.lgraph, obj.options,...
-                                'NegativeOverlapRange',[0 0.6], ...
-                                'PositiveOverlapRange',[0.8 1],...
-                                'NumStrongestRegions', 200,...
-                                'NumRegionsToSample', [16, 16]);
+                'NegativeOverlapRange', obj.negativeOverlapRange, ...
+                'PositiveOverlapRange', obj.positiveOverlapRange,...
+                'NumStrongestRegions', obj.numStrongestRegions,...
+                'NumRegionsToSample', obj.numRegionsToSample);
         end
 
         function obj = evaluation(obj)

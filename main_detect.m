@@ -11,16 +11,27 @@ addpath(genpath('detector'))
 
 
 ecgDetector = ECGdetector;
-ecgDetector.timeWindow = '20sec';
-ecgDetector.network = 'resnetSelf2_0.7_twcc';
+ecgDetector.timeWindow = '5sec_260';
+% ecgDetector.network = 'resnetSelf2_0.7_twcc';
+% ecgDetector.network = 'resnetSelf2Small_0.7_twcc';
+
+ecgDetector.network = 'resnet50_0.7_twcc';
+% ecgDetector.network = 'googlenet_0.7_twcc';
+% ecgDetector.network = 'alexnet_0.7_twcc';
+
 ecgDetector = ecgDetector.loadNet();
 
 %%
-ecgDetector.subjectNum = '102';
-ecgDetector.winNum = '20';
-
-
-ecgDetector = ecgDetector.loadData();
-ecgDetector = ecgDetector.plotSignal();
-
-ecgDetector = ecgDetector.detecting();
+ecgDetector.subjectNum = '101';
+n = 360;
+% T = zeros(1,n);
+tic
+for i = 1:n
+    ecgDetector.winNum = int2str(i);    
+    ecgDetector = ecgDetector.loadData();
+%     tic
+    ecgDetector = ecgDetector.detecting();
+%     T(i) = toc;
+end
+% sum(T)
+toc
