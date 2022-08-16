@@ -6,4 +6,4 @@ main_train
 ## 3. To calculate the detection time
 main_detect
 ## Grad-Cam Visualization
-code inside the folder: others/activate/
+codes inside the folder: others/activate/
